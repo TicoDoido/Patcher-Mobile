@@ -3,7 +3,7 @@ name: Build Android APK
 on:
   push:
     branches: [ "main" ]
-  workflow_dispatch: # Permite rodar manualmente pelo painel do GitHub
+  workflow_dispatch:
 
 jobs:
   build-android:
@@ -18,9 +18,6 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Instalar Flet CLI
-        run: pip install flet==0.28.3
-
       - name: Configurar Java 17
         uses: actions/setup-java@v4
         with:
@@ -30,18 +27,48 @@ jobs:
       - name: Configurar Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.27.1"
+          flutter-version: "3.24.5" # Versão estável recomendada para Flet 0.28.x
           channel: "stable"
+          cache: true
 
       - name: Aceitar licenças do Android SDK
-        run: yes | flutter doctor --android-licenses || true
+        run: |
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || \
+          yes | flutter doctor --android-licenses 2>/dev/null || \
+          true
+
+      - name: Instalar dependências nativas (necessário para build Android)
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y build-essential libssl-dev zlib1g-dev libbz2-dev libffi-dev
+
+      - name: Instalar Flet CLI
+        run: |
+          pip install --upgrade pip
+          pip install flet==0.28.3
+
+      - name: Instalar dependências do projeto
+        run: |
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
       - name: Compilar APK com Flet
-        run: flet build apk --project "Patcher Mobile" --description "Gerenciador de Patches - TicoDoido" --org "com.tico.patcher"
+        run: |
+          flet build apk \
+            --project "Patcher Mobile" \
+            --description "Gerenciador de Patches - TicoDoido" \
+            --org "com.tico.patcher" \
+            --verbose
+
+      - name: Localizar APK gerado (Diagnóstico)
+        run: |
+          echo "=== Procurando APKs ==="
+          ls -R build/apk/ || echo "Arquivos não encontrados em build/apk/"
+          find build/ -name "*.apk"
 
       - name: Upload do APK gerado
         uses: actions/upload-artifact@v4
         with:
           name: patcher-mobile-apk
-          path: build/apk/patcher-mobile.apk
+          path: build/apk/*.apk
           retention-days: 7
+          if-no-files-found: error
