@@ -1,0 +1,47 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch: # Permite rodar manualmente pelo painel do GitHub
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar Flet CLI
+        run: pip install flet==0.28.3
+
+      - name: Configurar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.27.1"
+          channel: "stable"
+
+      - name: Aceitar licenças do Android SDK
+        run: yes | flutter doctor --android-licenses || true
+
+      - name: Compilar APK com Flet
+        run: flet build apk --project "Patcher Mobile" --description "Gerenciador de Patches - TicoDoido" --org "com.tico.patcher"
+
+      - name: Upload do APK gerado
+        uses: actions/upload-artifact@v4
+        with:
+          name: patcher-mobile-apk
+          path: build/apk/patcher-mobile.apk
+          retention-days: 7

@@ -1,0 +1,4 @@
+flet==0.28.3
+# bsdiff4 e usada automaticamente no desktop se disponivel.
+# No Android, o app usa o fallback pure Python em bsdiff_compat.py.
+# NAO adicione bsdiff4 aqui — o packager do Flet para Android nao consegue compilar extensoes C nativas.
