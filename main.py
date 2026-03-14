@@ -220,33 +220,63 @@ def main(page: ft.Page):
     mod_field   = ft.TextField(label="Pasta Modificada", expand=True)
     patch_field = ft.TextField(label="Arquivo de Patch", expand=True)
 
+    tabs = ft.Tabs(
+        selected_index=0,
+        animation_duration=300,
+        tabs=[
+            ft.Tab(
+                text="Criar Patch",
+                icon=ft.Icons.CREATE_NEW_FOLDER,
+                content=ft.Container(
+                    padding=20,
+                    content=ft.Column([
+                        ft.Row([ft.Text("Original:",  width=80), orig_field,  ft.ElevatedButton("...", on_click=lambda _: (selection_type.clear(), selection_type.append('orig'),  file_picker.get_directory_path()))]),
+                        ft.Row([ft.Text("Modificada:", width=80), mod_field,  ft.ElevatedButton("...", on_click=lambda _: (selection_type.clear(), selection_type.append('mod'),   file_picker.get_directory_path()))]),
+                        ft.Row([ft.Text("Patch:",      width=80), patch_field, ft.ElevatedButton("...", on_click=lambda _: (selection_type.clear(), selection_type.append('patch'), file_picker.save_file()))]),
+                        ft.Row([
+                            ft.ElevatedButton("Criar Patch", icon=ft.Icons.AUTO_FIX_HIGH, bgcolor=ft.Colors.GREEN_700, on_click=lambda _: threading.Thread(target=create_patch, args=(orig_field.value, mod_field.value, patch_field.value, log_func, show_info, show_error), daemon=True).start()),
+                        ], alignment="center"),
+                    ], spacing=20)
+                )
+            ),
+            ft.Tab(
+                text="Aplicar Patch",
+                icon=ft.Icons.SYSTEM_UPDATE_ALT,
+                content=ft.Container(
+                    padding=20,
+                    content=ft.Column([
+                        ft.Row([ft.Text("Pasta:",      width=80), orig_field,  ft.ElevatedButton("...", on_click=lambda _: (selection_type.clear(), selection_type.append('orig'),  file_picker.get_directory_path()))]),
+                        ft.Row([ft.Text("Patch:",      width=80), patch_field, ft.ElevatedButton("...", on_click=lambda _: (selection_type.clear(), selection_type.append('patch'), file_picker.pick_files()))]),
+                        ft.Row([
+                            ft.ElevatedButton("Aplicar Patch", icon=ft.Icons.PLAY_ARROW, bgcolor=ft.Colors.BLUE_700, on_click=lambda _: threading.Thread(target=apply_patch, args=(orig_field.value, patch_field.value, log_func, show_info, show_error), daemon=True).start()),
+                        ], alignment="center"),
+                    ], spacing=20)
+                )
+            ),
+        ],
+        expand=True
+    )
+
     page.add(
-        ft.Container(
-            padding=15,
-            content=ft.Column([
-                ft.Row([ft.Text("Original:",  width=80), orig_field,  ft.ElevatedButton("...", on_click=lambda _: (selection_type.clear(), selection_type.append('orig'),  file_picker.get_directory_path()))]),
-                ft.Row([ft.Text("Modificada:", width=80), mod_field,  ft.ElevatedButton("...", on_click=lambda _: (selection_type.clear(), selection_type.append('mod'),   file_picker.get_directory_path()))]),
-                ft.Row([ft.Text("Patch:",      width=80), patch_field, ft.ElevatedButton("...", on_click=lambda _: (selection_type.clear(), selection_type.append('patch'), file_picker.save_file()))]),
-
+        ft.Column([
+            ft.Row([
+                ft.Text("Patch Maker", size=24, weight="bold"),
                 ft.Row([
-                    ft.ElevatedButton("Criar Patch",   bgcolor=ft.Colors.GREEN_700, on_click=lambda _: threading.Thread(target=create_patch, args=(orig_field.value, mod_field.value, patch_field.value, log_func, show_info, show_error), daemon=True).start()),
-                    ft.ElevatedButton("Aplicar Patch", bgcolor=ft.Colors.BLUE_700,  on_click=lambda _: threading.Thread(target=apply_patch,  args=(orig_field.value, patch_field.value, log_func, show_info, show_error), daemon=True).start()),
-                    ft.ElevatedButton("Ajuda", on_click=show_help),
+                    ft.IconButton(ft.Icons.HELP_OUTLINE, on_click=show_help),
                     ft.IconButton(ft.Icons.DELETE_SWEEP, tooltip="Limpar Log", on_click=clear_log)
-                ], alignment="center"),
-
-                ft.Column([
-                    ft.Row([ft.Text("Relatorio:", size=14, weight="bold")]),
-                    ft.Container(
-                        content=log_list,
-                        expand=True,
-                        border_radius=5,
-                        border=ft.border.all(1, ft.Colors.BLUE_GREY_700),
-                        padding=5,
-                    )
-                ], expand=True)
-            ], expand=True)
-        )
+                ])
+            ], alignment="spaceBetween"),
+            tabs,
+            ft.Divider(),
+            ft.Text("Relatorio:", size=14, weight="bold"),
+            ft.Container(
+                content=log_list,
+                height=150,
+                border_radius=5,
+                border=ft.border.all(1, ft.Colors.BLUE_GREY_700),
+                padding=5,
+            )
+        ], expand=True)
     )
 
     # Solicita permissao de armazenamento no Android
