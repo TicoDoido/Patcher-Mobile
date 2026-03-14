@@ -288,14 +288,18 @@ def main(page: ft.Page):
         ], expand=True)
     )
 
-    # Adiciona o Gerenciador de Permissões à página
-    ph = ft.PermissionHandler()
-    page.overlay.append(ph)
+    # Alguns builds/plataformas não incluem o controle PermissionHandler.
+    # Evita o erro "unknown control: permission_handler" e mantém o app funcional.
+    permission_handler_cls = getattr(ft, "PermissionHandler", None)
+    permission_type = getattr(getattr(ft, "PermissionType", None), "MANAGE_EXTERNAL_STORAGE", None)
 
-    # Solicita a permissão de gerenciamento total (necessário para o Android 11+)
-    try:
-        ph.request_permission(ft.PermissionType.MANAGE_EXTERNAL_STORAGE)
-    except Exception as e:
-        print(f"Erro ao solicitar permissao avançada: {e}")
+    if permission_handler_cls and permission_type:
+        try:
+            ph = permission_handler_cls()
+            page.overlay.append(ph)
+            # Solicita a permissão de gerenciamento total (necessário para Android 11+)
+            ph.request_permission(permission_type)
+        except Exception as e:
+            print(f"Permissão avançada indisponível nesta plataforma/build: {e}")
 
 ft.app(main)
