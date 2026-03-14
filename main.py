@@ -4,7 +4,7 @@ import threading
 import flet as ft
 from bsdiff_compat import diff as bsdiff_diff, patch as bsdiff_patch
 
-CHUNK_SIZE = 1024 * 1024 * 1024  # 1 GB
+CHUNK_SIZE = 2 * 1024 * 1024  # 2 MB (Mais seguro para Android)
 
 def normalize_android_path(path):
     if not path:
@@ -37,6 +37,9 @@ def create_patch(original_dir, modified_dir, patch_file, log_func, show_info, sh
             for file_name in files:
                 relative_path = os.path.relpath(os.path.join(root, file_name), modified_dir)
                 modified_files.add(relative_path)
+        
+        log_func(f"Arquivos na pasta modificada: {len(modified_files)}")
+        diffs_found = 0
 
         with open(patch_file, 'wb') as pf:
             for root, _, files in os.walk(original_dir):
@@ -57,20 +60,16 @@ def create_patch(original_dir, modified_dir, patch_file, log_func, show_info, sh
                                 o_chunk = o_chunk or b""
                                 m_chunk = m_chunk or b""
                                 if o_chunk != m_chunk:
-                                    log_func(f"  -> Diferenca na Parte {chunk_idx}. Gerando delta...")
+                                    log_func(f"  -> Diff detectado (P{chunk_idx}). Gerando delta...")
                                     delta = bsdiff_diff(o_chunk, m_chunk)
-                                    del o_chunk, m_chunk
                                     compressed_delta = zlib.compress(delta, level=9)
-                                    del delta
                                     pf.write(len(relative_path).to_bytes(4, 'little'))
                                     pf.write(relative_path.encode('utf-8'))
                                     pf.write((2).to_bytes(1, 'little'))
                                     pf.write(chunk_idx.to_bytes(4, 'little'))
                                     pf.write(len(compressed_delta).to_bytes(4, 'little'))
                                     pf.write(compressed_delta)
-                                    del compressed_delta
-                                else:
-                                    del o_chunk, m_chunk
+                                    diffs_found += 1
                                 chunk_idx += 1
                                 import gc
                                 gc.collect()
@@ -86,19 +85,22 @@ def create_patch(original_dir, modified_dir, patch_file, log_func, show_info, sh
                         if not data:
                             break
                         compressed_data = zlib.compress(data, level=9)
-                        del data
                         pf.write(len(relative_path).to_bytes(4, 'little'))
                         pf.write(relative_path.encode('utf-8'))
                         pf.write((3).to_bytes(1, 'little'))
                         pf.write(chunk_idx.to_bytes(4, 'little'))
                         pf.write(len(compressed_data).to_bytes(4, 'little'))
                         pf.write(compressed_data)
-                        log_func(f"  -> Parte {chunk_idx} adicionada")
-                        del compressed_data
+                        log_func(f"  -> Adicionado (P{chunk_idx})")
+                        diffs_found += 1
                         import gc
                         gc.collect()
                         chunk_idx += 1
-        show_info("Sucesso", "Patch criado com sucesso!")
+        
+        if diffs_found > 0:
+            show_info("Sucesso", f"Patch criado com {diffs_found} alteracoes!")
+        else:
+            show_info("Aviso", "Nenhuma diferenca encontrada entre as pastas.")
     except Exception as e:
         show_error("Erro", f"Erro: {e}")
 
@@ -209,16 +211,23 @@ def main(page: ft.Page):
         res = e.path if e.path else (e.files[0].path if e.files else None)
         if res:
             res = normalize_android_path(res)
-            if selection_type[0] == 'orig': orig_field.value = res
-            elif selection_type[0] == 'mod': mod_field.value = res
-            elif selection_type[0] == 'patch': patch_field.value = res
+            if selection_type[0] == 'c_orig':  c_orig_field.value = res
+            elif selection_type[0] == 'c_mod':  c_mod_field.value = res
+            elif selection_type[0] == 'c_patch': c_patch_field.value = res
+            elif selection_type[0] == 'a_orig':  a_orig_field.value = res
+            elif selection_type[0] == 'a_patch': a_patch_field.value = res
             page.update()
 
     file_picker.on_result = on_picker_result
 
-    orig_field  = ft.TextField(label="Pasta Original",   expand=True)
-    mod_field   = ft.TextField(label="Pasta Modificada", expand=True)
-    patch_field = ft.TextField(label="Arquivo de Patch", expand=True)
+    # Campos - Criar Patch
+    c_orig_field  = ft.TextField(label="Pasta Original",   expand=True)
+    c_mod_field   = ft.TextField(label="Pasta Modificada", expand=True)
+    c_patch_field = ft.TextField(label="Salvar Patch em", expand=True)
+
+    # Campos - Aplicar Patch
+    a_orig_field  = ft.TextField(label="Pasta Alvo",    expand=True)
+    a_patch_field = ft.TextField(label="Arquivo Patch", expand=True)
 
     tabs = ft.Tabs(
         selected_index=0,
@@ -230,11 +239,11 @@ def main(page: ft.Page):
                 content=ft.Container(
                     padding=20,
                     content=ft.Column([
-                        ft.Row([ft.Text("Original:",  width=80), orig_field,  ft.ElevatedButton("...", on_click=lambda _: (selection_type.clear(), selection_type.append('orig'),  file_picker.get_directory_path()))]),
-                        ft.Row([ft.Text("Modificada:", width=80), mod_field,  ft.ElevatedButton("...", on_click=lambda _: (selection_type.clear(), selection_type.append('mod'),   file_picker.get_directory_path()))]),
-                        ft.Row([ft.Text("Patch:",      width=80), patch_field, ft.ElevatedButton("...", on_click=lambda _: (selection_type.clear(), selection_type.append('patch'), file_picker.save_file()))]),
+                        ft.Row([ft.Text("Original:",  width=80), c_orig_field,  ft.ElevatedButton("...", on_click=lambda _: (selection_type.clear(), selection_type.append('c_orig'),  file_picker.get_directory_path()))]),
+                        ft.Row([ft.Text("Modificada:", width=80), c_mod_field,  ft.ElevatedButton("...", on_click=lambda _: (selection_type.clear(), selection_type.append('c_mod'),   file_picker.get_directory_path()))]),
+                        ft.Row([ft.Text("Patch:",      width=80), c_patch_field, ft.ElevatedButton("...", on_click=lambda _: (selection_type.clear(), selection_type.append('c_patch'), file_picker.save_file()))]),
                         ft.Row([
-                            ft.ElevatedButton("Criar Patch", icon=ft.Icons.AUTO_FIX_HIGH, bgcolor=ft.Colors.GREEN_700, on_click=lambda _: threading.Thread(target=create_patch, args=(orig_field.value, mod_field.value, patch_field.value, log_func, show_info, show_error), daemon=True).start()),
+                            ft.ElevatedButton("Criar Patch", icon=ft.Icons.AUTO_FIX_HIGH, bgcolor=ft.Colors.GREEN_700, on_click=lambda _: threading.Thread(target=create_patch, args=(c_orig_field.value, c_mod_field.value, c_patch_field.value, log_func, show_info, show_error), daemon=True).start()),
                         ], alignment="center"),
                     ], spacing=20)
                 )
@@ -245,10 +254,10 @@ def main(page: ft.Page):
                 content=ft.Container(
                     padding=20,
                     content=ft.Column([
-                        ft.Row([ft.Text("Pasta:",      width=80), orig_field,  ft.ElevatedButton("...", on_click=lambda _: (selection_type.clear(), selection_type.append('orig'),  file_picker.get_directory_path()))]),
-                        ft.Row([ft.Text("Patch:",      width=80), patch_field, ft.ElevatedButton("...", on_click=lambda _: (selection_type.clear(), selection_type.append('patch'), file_picker.pick_files()))]),
+                        ft.Row([ft.Text("Pasta:",      width=80), a_orig_field,  ft.ElevatedButton("...", on_click=lambda _: (selection_type.clear(), selection_type.append('a_orig'),  file_picker.get_directory_path()))]),
+                        ft.Row([ft.Text("Patch:",      width=80), a_patch_field, ft.ElevatedButton("...", on_click=lambda _: (selection_type.clear(), selection_type.append('a_patch'), file_picker.pick_files()))]),
                         ft.Row([
-                            ft.ElevatedButton("Aplicar Patch", icon=ft.Icons.PLAY_ARROW, bgcolor=ft.Colors.BLUE_700, on_click=lambda _: threading.Thread(target=apply_patch, args=(orig_field.value, patch_field.value, log_func, show_info, show_error), daemon=True).start()),
+                            ft.ElevatedButton("Aplicar Patch", icon=ft.Icons.PLAY_ARROW, bgcolor=ft.Colors.BLUE_700, on_click=lambda _: threading.Thread(target=apply_patch, args=(a_orig_field.value, a_patch_field.value, log_func, show_info, show_error), daemon=True).start()),
                         ], alignment="center"),
                     ], spacing=20)
                 )
