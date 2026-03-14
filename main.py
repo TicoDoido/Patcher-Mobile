@@ -6,8 +6,32 @@ from bsdiff_compat import diff as bsdiff_diff, patch as bsdiff_patch
 
 CHUNK_SIZE = 1024 * 1024 * 1024  # 1 GB
 
+def normalize_android_path(path):
+    if not path:
+        return path
+    # Converte caminhos do Android SAF para caminhos de sistema de arquivos reais
+    if "/document/primary:" in path:
+        path = path.replace("/document/primary:", "/storage/emulated/0/")
+    elif "/tree/primary:" in path:
+        path = path.replace("/tree/primary:", "/storage/emulated/0/")
+    
+    # Alguns pickers podem retornar caminhos codificados
+    path = path.replace("%3A", ":").replace("%2F", "/")
+    
+    return path
+
 def create_patch(original_dir, modified_dir, patch_file, log_func, show_info, show_error):
     try:
+        log_func(f"Iniciando criacao de patch...")
+        log_func(f"Patch: {patch_file}")
+        
+        if not os.path.exists(original_dir):
+            show_error("Erro", "Pasta Original nao existe!")
+            return
+        if not os.path.exists(modified_dir):
+            show_error("Erro", "Pasta Modificada nao existe!")
+            return
+            
         modified_files = set()
         for root, _, files in os.walk(modified_dir):
             for file_name in files:
@@ -80,6 +104,9 @@ def create_patch(original_dir, modified_dir, patch_file, log_func, show_info, sh
 
 def apply_patch(original_dir, patch_file, log_func, show_info, show_error):
     try:
+        log_func(f"Iniciando aplicacao de patch...")
+        log_func(f"Arquivo: {patch_file}")
+        
         if not os.path.exists(patch_file):
             show_error("Erro", "Patch nao encontrado!")
             return
@@ -125,7 +152,7 @@ def apply_patch(original_dir, patch_file, log_func, show_info, show_error):
         show_error("Erro", f"Erro: {e}")
 
 def main(page: ft.Page):
-    page.title = "Gerenciador de Patches v2 - TicoDoido"
+    page.title = "Patch Maker"
     page.window.width = 680
     page.window.height = 650
     page.theme_mode = ft.ThemeMode.DARK
@@ -139,7 +166,22 @@ def main(page: ft.Page):
         page.open(dlg)
 
     def show_help(_):
-        help_text = "Instrucoes de Uso:\n\n1. Criar Patch:\n- Selecione a pasta original e a pasta modificada.\n- Escolha onde salvar o arquivo de patch.\n- Clique em 'Criar Patch' para gerar um \n    arquivo de patch dos arquivos modificados.\n\n2. Aplicar Patch:\n- Selecione a pasta original e o arquivo de patch.\n    E NORMAL APARECER QUE O ARQUIVO DE PATCH \n    JA EXISTE AO SELECIONAR ELE NA APLICACAO \n    DO PATCH, E SO RESPONDER SIM !!!\n- Clique em 'Aplicar Patch' para aplicar \n    as modificacoes na pasta original.\n\nNota: Certifique-se de fazer backup da pasta original antes de aplicar o patch."
+        help_text = (
+            "Instrucoes de Uso:\n\n"
+            "1. Permissoes (Android):\n"
+            "- O Android requer permissao de armazenamento.\n"
+            "- Se o app falhar com 'Permission Denied', va em:\n"
+            "  Configuracoes > Apps > Patch Maker > Permissoes\n"
+            "  e ative 'Acesso a todos os arquivos'.\n\n"
+            "2. Criar Patch:\n"
+            "- Selecione a pasta original e a pasta modificada.\n"
+            "- Escolha onde salvar o arquivo de patch.\n"
+            "- Clique em 'Criar Patch' para gerar o delta.\n\n"
+            "3. Aplicar Patch:\n"
+            "- Selecione a pasta original e o arquivo de patch.\n"
+            "- Clique em 'Aplicar Patch' para aplicar as mudancas.\n\n"
+            "Nota: Faca backup dos seus arquivos antes de aplicar patches."
+        )
         dlg = ft.AlertDialog(
             title=ft.Text("Ajuda"),
             content=ft.Text(help_text),
@@ -166,6 +208,7 @@ def main(page: ft.Page):
     def on_picker_result(e: ft.FilePickerResultEvent):
         res = e.path if e.path else (e.files[0].path if e.files else None)
         if res:
+            res = normalize_android_path(res)
             if selection_type[0] == 'orig': orig_field.value = res
             elif selection_type[0] == 'mod': mod_field.value = res
             elif selection_type[0] == 'patch': patch_field.value = res
@@ -205,5 +248,11 @@ def main(page: ft.Page):
             ], expand=True)
         )
     )
+
+    # Solicita permissao de armazenamento no Android
+    try:
+        page.request_permission(ft.PermissionType.STORAGE)
+    except Exception as e:
+        print(f"Erro ao solicitar permissao: {e}")
 
 ft.app(main)
