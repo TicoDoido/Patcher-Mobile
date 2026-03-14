@@ -288,10 +288,14 @@ def main(page: ft.Page):
         ], expand=True)
     )
 
-    # Solicita permissao de armazenamento no Android
+    # Adiciona o Gerenciador de Permissões à página
+    ph = ft.PermissionHandler()
+    page.overlay.append(ph)
+
+    # Solicita a permissão de gerenciamento total (necessário para o Android 11+)
     try:
-        page.request_permission(ft.PermissionType.STORAGE)
+        ph.request_permission(ft.PermissionType.MANAGE_EXTERNAL_STORAGE)
     except Exception as e:
-        print(f"Erro ao solicitar permissao: {e}")
+        print(f"Erro ao solicitar permissao avançada: {e}")
 
 ft.app(main)
