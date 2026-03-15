@@ -219,6 +219,13 @@ def main(page: ft.Page):
             )
             return
 
+        # Em alguns builds, o controle pode existir mas ainda não estar anexado
+        # de fato à página no momento do clique.
+        if getattr(permission_handler, "page", None) is None:
+            if permission_handler not in page.overlay:
+                page.overlay.append(permission_handler)
+            page.update()
+
         permission_names = [
             "MANAGE_EXTERNAL_STORAGE",  # Android 11+
             "READ_EXTERNAL_STORAGE",    # Android <= 12
@@ -349,6 +356,7 @@ def main(page: ft.Page):
         try:
             permission_handler = permission_handler_cls()
             page.overlay.append(permission_handler)
+            page.update()
             request_storage_permissions()
         except Exception as e:
             print(f"Permissão avançada indisponível nesta plataforma/build: {e}")
