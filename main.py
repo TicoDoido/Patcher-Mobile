@@ -171,10 +171,13 @@ def main(page: ft.Page):
         help_text = (
             "Instrucoes de Uso:\n\n"
             "1. Permissoes (Android):\n"
-            "- O Android requer permissao de armazenamento.\n"
-            "- Se o app falhar com 'Permission Denied', va em:\n"
-            "  Configuracoes > Apps > Patch Maker > Permissoes\n"
-            "  e ative 'Acesso a todos os arquivos'.\n\n"
+            "- No Android 11+, a permissao principal e 'Acesso a todos os arquivos'.\n"
+            "- Essa permissao normalmente NAO aparece na tela\n"
+            "  Configuracoes > Apps > Permissoes.\n"
+            "- Abra: Configuracoes > Apps > Acesso especial >\n"
+            "  Acesso a todos os arquivos e ative o Patch Maker.\n"
+            "- Em Android 10 ou inferior, o sistema pode pedir\n"
+            "  permissao normal de armazenamento.\n\n"
             "2. Criar Patch:\n"
             "- Selecione a pasta original e a pasta modificada.\n"
             "- Escolha onde salvar o arquivo de patch.\n"
@@ -202,6 +205,55 @@ def main(page: ft.Page):
     def clear_log(_):
         log_list.controls.clear()
         log_func("Log limpo!")
+
+    permission_handler = None
+
+    def request_storage_permissions(_=None):
+        if not permission_handler:
+            log_func("Permissoes avancadas nao disponiveis neste build.")
+            show_error(
+                "Permissao indisponivel",
+                "Este build nao possui PermissionHandler.\n"
+                "No Android 11+, habilite manualmente em:\n"
+                "Configuracoes > Apps > Acesso especial > Acesso a todos os arquivos.",
+            )
+            return
+
+        permission_names = [
+            "MANAGE_EXTERNAL_STORAGE",  # Android 11+
+            "READ_EXTERNAL_STORAGE",    # Android <= 12
+            "WRITE_EXTERNAL_STORAGE",   # Android <= 10
+        ]
+
+        permissions = []
+        permission_type_cls = getattr(ft, "PermissionType", None)
+        if permission_type_cls:
+            for name in permission_names:
+                p = getattr(permission_type_cls, name, None)
+                if p:
+                    permissions.append(p)
+
+        if not permissions:
+            log_func("Tipos de permissao de armazenamento indisponiveis.")
+            return
+
+        try:
+            request_permissions = getattr(permission_handler, "request_permissions", None)
+            if callable(request_permissions):
+                request_permissions(permissions)
+            else:
+                for permission in permissions:
+                    permission_handler.request_permission(permission)
+            log_func("Solicitacao de permissao enviada ao Android.")
+            show_info(
+                "Permissao de armazenamento",
+                "Se nenhum popup aparecer no Android 11+, abra:\n"
+                "Configuracoes > Apps > Acesso especial >\n"
+                "Acesso a todos os arquivos e habilite o app.",
+            )
+        except Exception as e:
+            log_func(f"Falha ao solicitar permissao: {e}")
+            show_error("Erro", f"Nao foi possivel solicitar permissao: {e}")
 
     file_picker = ft.FilePicker()
     page.overlay.append(file_picker)
@@ -244,6 +296,7 @@ def main(page: ft.Page):
                         ft.Row([ft.Text("Patch:",      width=80), c_patch_field, ft.ElevatedButton("...", on_click=lambda _: (selection_type.clear(), selection_type.append('c_patch'), file_picker.save_file()))]),
                         ft.Row([
                             ft.ElevatedButton("Criar Patch", icon=ft.Icons.AUTO_FIX_HIGH, bgcolor=ft.Colors.GREEN_700, on_click=lambda _: threading.Thread(target=create_patch, args=(c_orig_field.value, c_mod_field.value, c_patch_field.value, log_func, show_info, show_error), daemon=True).start()),
+                            ft.OutlinedButton("Solicitar Acesso", icon=ft.Icons.LOCK_OPEN, on_click=request_storage_permissions),
                         ], alignment="center"),
                     ], spacing=20)
                 )
@@ -291,14 +344,12 @@ def main(page: ft.Page):
     # Alguns builds/plataformas não incluem o controle PermissionHandler.
     # Evita o erro "unknown control: permission_handler" e mantém o app funcional.
     permission_handler_cls = getattr(ft, "PermissionHandler", None)
-    permission_type = getattr(getattr(ft, "PermissionType", None), "MANAGE_EXTERNAL_STORAGE", None)
 
-    if permission_handler_cls and permission_type:
+    if permission_handler_cls:
         try:
-            ph = permission_handler_cls()
-            page.overlay.append(ph)
-            # Solicita a permissão de gerenciamento total (necessário para Android 11+)
-            ph.request_permission(permission_type)
+            permission_handler = permission_handler_cls()
+            page.overlay.append(permission_handler)
+            request_storage_permissions()
         except Exception as e:
             print(f"Permissão avançada indisponível nesta plataforma/build: {e}")
 
