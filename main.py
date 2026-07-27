@@ -305,15 +305,14 @@ def main(page: ft.Page):
         ], expand=True)
     )
 
-    # Adiciona o Gerenciador de Permissões à página
-    ph = ft.PermissionHandler()
-    page.overlay.append(ph)
-
-    # Solicita a permissão de gerenciamento total (necessário para o Android 11+)
-    try:
-        ph.request_permission(ft.PermissionType.MANAGE_EXTERNAL_STORAGE)
-    except Exception as e:
-        print(f"Erro ao solicitar permissao avançada: {e}")
+    # Adiciona o Gerenciador de Permissões apenas em plataformas mobile suportadas (Android/iOS)
+    if page.platform in (ft.PagePlatform.ANDROID, ft.PagePlatform.IOS):
+        try:
+            ph = ft.PermissionHandler()
+            page.overlay.append(ph)
+            ph.request_permission(ft.PermissionType.MANAGE_EXTERNAL_STORAGE)
+        except Exception as e:
+            print(f"Erro ao solicitar permissao avançada: {e}")
 
 if __name__ == "__main__":
     ft.app(main)
