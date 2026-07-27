@@ -1,0 +1,43 @@
+name: Build Android Python Wheel
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-wheel:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install cibuildwheel Cython setuptools wheel build
+
+      - name: Build Android wheel
+        env:
+          CIBW_BUILD: "cp313-android_*"
+          CIBW_ARCHS_ANDROID: "arm64-v8a"
+          CIBW_BUILD_VERBOSITY: "1"
+        run: |
+          python -m cibuildwheel --platform android --output-dir wheelhouse
+
+      - name: Upload wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-python-wheel
+          path: wheelhouse/*.whl
+          if-no-files-found: error
