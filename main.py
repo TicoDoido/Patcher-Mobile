@@ -2,6 +2,7 @@ import os
 import zlib
 import threading
 import flet as ft
+import flet_permission_handler as fph
 try:
     import bsdiff_cython
     bsdiff_diff = bsdiff_cython.diff
@@ -308,12 +309,12 @@ def main(page: ft.Page):
     # Adiciona o Gerenciador de Permissões apenas em plataformas mobile suportadas (Android/iOS)
     if page.platform == ft.PagePlatform.ANDROID:
         try:
-            ph = ft.PermissionHandler()
+            ph = fph.PermissionHandler()
             page.overlay.append(ph)
             # STORAGE cobre leitura/escrita em Androids antigos; a permissao
             # ampla e necessaria para acesso a todo o armazenamento no Android 11+.
-            ph.request_permission(ft.PermissionType.STORAGE)
-            ph.request_permission(ft.PermissionType.MANAGE_EXTERNAL_STORAGE)
+            ph.request_permission(fph.PermissionType.STORAGE)
+            ph.request_permission(fph.PermissionType.MANAGE_EXTERNAL_STORAGE)
         except Exception as e:
             print(f"Erro ao solicitar permissao avançada: {e}")
 
