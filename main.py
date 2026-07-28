@@ -47,7 +47,7 @@ def read_exact(file, size, description):
 
 def patch_output_path(base_dir, relative_path):
     if not isinstance(relative_path, str) or not relative_path:
-        raise ValueError("Patch possui um caminho de arquivo invalido.")
+        raise ValueError("Patch possui um caminho de arquivo inválido.")
     relative_path = relative_path.replace("\\", "/")
     base_dir = os.path.abspath(base_dir)
     output_path = os.path.abspath(os.path.join(base_dir, *relative_path.split("/")))
@@ -182,7 +182,7 @@ def create_patch(original_dir, modified_dir, patch_file, log_func, show_info, sh
             pf.write(PATCH_FOOTER_MAGIC)
         
         if diffs_found > 0:
-            show_info("Sucesso", f"Patch criado com {diffs_found} alteracoes!")
+            show_info("Sucesso", f"Patch criado com {diffs_found} alteracões!")
         else:
             show_info("Aviso", "Nenhuma diferença encontrada entre as pastas.")
     except Exception as e:
