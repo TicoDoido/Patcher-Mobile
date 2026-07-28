@@ -4,9 +4,9 @@ import threading
 import flet as ft
 import flet_permission_handler as fph
 try:
-    import bsdiff_cython
+    import bsdiff
     bsdiff_diff = bsdiff_cython.diff
-    BSDIFF_ENGINE_NAME = "bsdiff_cython (.pyx)"
+    BSDIFF_ENGINE_NAME = "bsdiff(.pyx)"
 except ImportError:
     try:
         import bsdiff4

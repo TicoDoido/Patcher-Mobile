@@ -6,7 +6,7 @@ setup(
     version="0.1.0",
     ext_modules=cythonize(
         [
-            Extension("bsdiff_cython", ["bsdiff_cython.pyx"]),
+            Extension("bsdiff", ["bsdiff.pyx"]),
         ],
         language_level=3,
     ),
