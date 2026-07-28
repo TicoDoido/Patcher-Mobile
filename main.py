@@ -22,7 +22,7 @@ try:
 except ImportError:
     from bsdiff_compat import patch as bsdiff_patch
 
-CHUNK_SIZE = 2 * 1024 * 1024  # 2 MB (Mais seguro para Android)
+CHUNK_SIZE = 500 * 1024 * 1024  # 500 MB
 
 def normalize_android_path(path):
     if not path:
