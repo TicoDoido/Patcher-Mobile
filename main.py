@@ -256,6 +256,7 @@ def main(page: ft.Page):
                 icon=ft.Icons.CREATE_NEW_FOLDER,
                 content=ft.Container(
                     padding=20,
+                    expand=True,
                     content=ft.Column([
                         ft.Row([ft.Text("Original:",  width=80), c_orig_field,  ft.ElevatedButton("...", on_click=lambda _: (selection_type.clear(), selection_type.append('c_orig'),  file_picker.get_directory_path()))]),
                         ft.Row([ft.Text("Modificada:", width=80), c_mod_field,  ft.ElevatedButton("...", on_click=lambda _: (selection_type.clear(), selection_type.append('c_mod'),   file_picker.get_directory_path()))]),
@@ -263,7 +264,7 @@ def main(page: ft.Page):
                         ft.Row([
                             ft.ElevatedButton("Criar Patch", icon=ft.Icons.AUTO_FIX_HIGH, bgcolor=ft.Colors.GREEN_700, on_click=lambda _: threading.Thread(target=create_patch, args=(c_orig_field.value, c_mod_field.value, c_patch_field.value, log_func, show_info, show_error), daemon=True).start()),
                         ], alignment="center"),
-                    ], spacing=20)
+                    ], spacing=20, expand=True, scroll=ft.ScrollMode.ADAPTIVE)
                 )
             ),
             ft.Tab(
@@ -271,13 +272,14 @@ def main(page: ft.Page):
                 icon=ft.Icons.SYSTEM_UPDATE_ALT,
                 content=ft.Container(
                     padding=20,
+                    expand=True,
                     content=ft.Column([
                         ft.Row([ft.Text("Pasta:",      width=80), a_orig_field,  ft.ElevatedButton("...", on_click=lambda _: (selection_type.clear(), selection_type.append('a_orig'),  file_picker.get_directory_path()))]),
                         ft.Row([ft.Text("Patch:",      width=80), a_patch_field, ft.ElevatedButton("...", on_click=lambda _: (selection_type.clear(), selection_type.append('a_patch'), file_picker.pick_files()))]),
                         ft.Row([
                             ft.ElevatedButton("Aplicar Patch", icon=ft.Icons.PLAY_ARROW, bgcolor=ft.Colors.BLUE_700, on_click=lambda _: threading.Thread(target=apply_patch, args=(a_orig_field.value, a_patch_field.value, log_func, show_info, show_error), daemon=True).start()),
                         ], alignment="center"),
-                    ], spacing=20)
+                    ], spacing=20, expand=True, scroll=ft.ScrollMode.ADAPTIVE)
                 )
             ),
         ],
