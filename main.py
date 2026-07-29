@@ -57,7 +57,7 @@ def patch_output_path(base_dir, relative_path):
 
 
 def patch_relative_path(path):
-    """Usa '/' dentro do patch, independentemente de Windows ou Android."""
+    # Usa '/' dentro do patch, independentemente de Windows ou Android.
     return path.replace("\\", "/") if isinstance(path, str) else path
 
 def normalize_android_path(path):
@@ -78,7 +78,7 @@ def normalize_android_path(path):
 
 def create_patch(original_dir, modified_dir, patch_file, log_func, show_info, show_error):
     try:
-        log_func(f"Iniciando criacao de patch ({BSDIFF_ENGINE_NAME})...")
+        log_func(f"Iniciando criação de patch ({BSDIFF_ENGINE_NAME})...")
         log_func(f"Patch: {patch_file}")
         
         if not os.path.exists(original_dir):
@@ -238,14 +238,14 @@ def _apply_patch_legacy(original_dir, patch_file, log_func, show_info, show_erro
         show_error("Erro", f"Erro: {e}")
 
 def apply_patch(original_dir, patch_file, log_func, show_info, show_error):
-    """Aplica somente patches v2 cuja base inteira tenha sido validada."""
+    # Aplica somente patches v2 cuja base inteira tenha sido validada.
     try:
         log_func("Verificando integridade do patch e da pasta alvo...")
         if not os.path.isdir(original_dir):
-            show_error("Erro", "Pasta alvo nao existe!")
+            show_error("Erro", "Pasta alvo não existe!")
             return
         if not os.path.isfile(patch_file):
-            show_error("Erro", "Patch nao encontrado!")
+            show_error("Erro", "Patch não encontrado!")
             return
 
         with open(patch_file, "rb") as pf:
@@ -260,7 +260,7 @@ def apply_patch(original_dir, patch_file, log_func, show_info, show_error):
             pf.seek(-footer_size, os.SEEK_END)
             manifest_size = int.from_bytes(read_exact(pf, 4, "tamanho do manifesto"), "little")
             if read_exact(pf, len(PATCH_FOOTER_MAGIC), "rodape") != PATCH_FOOTER_MAGIC:
-                raise ValueError("Patch invalido: rodape nao encontrado.")
+                raise ValueError("Patch invalido: rodapé não encontrado.")
             manifest_start = patch_size - footer_size - manifest_size
             if manifest_size > MAX_MANIFEST_SIZE or manifest_start < len(PATCH_MAGIC):
                 raise ValueError("Patch invalido: manifesto com tamanho incorreto.")
@@ -268,23 +268,23 @@ def apply_patch(original_dir, patch_file, log_func, show_info, show_error):
             manifest = json.loads(read_exact(pf, manifest_size, "manifesto").decode("utf-8"))
 
             if manifest.get("version") != 2 or not isinstance(manifest.get("files"), list):
-                raise ValueError("Patch invalido: manifesto nao suportado.")
+                raise ValueError("Patch invalido: manifesto não suportado.")
 
             files = {}
             for info in manifest["files"]:
                 if not isinstance(info, dict):
-                    raise ValueError("Patch invalido: entrada de manifesto incorreta.")
+                    raise ValueError("Patch inválido: entrada de manifesto incorreta.")
                 relative_path = patch_relative_path(info.get("path"))
                 output_path = patch_output_path(original_dir, relative_path)
                 source_hash = info.get("source_sha256")
                 target_hash = info.get("target_sha256")
                 target_size = info.get("target_size")
                 if relative_path in files or not isinstance(target_hash, str) or len(target_hash) != 64:
-                    raise ValueError("Patch invalido: hashes ou caminhos incorretos.")
+                    raise ValueError("Patch inválido: hashes ou caminhos incorretos.")
                 if source_hash is not None and (not isinstance(source_hash, str) or len(source_hash) != 64):
-                    raise ValueError("Patch invalido: hash da base incorreto.")
+                    raise ValueError("Patch inválido: hash da base incorreto.")
                 if not isinstance(target_size, int) or target_size < 0:
-                    raise ValueError("Patch invalido: tamanho final incorreto.")
+                    raise ValueError("Patch inválido: tamanho final incorreto.")
                 files[relative_path] = (output_path, source_hash, target_hash, target_size)
 
             mismatches = []
@@ -297,7 +297,7 @@ def apply_patch(original_dir, patch_file, log_func, show_info, show_error):
             if mismatches:
                 preview = "\n".join(mismatches[:8])
                 extra = "" if len(mismatches) <= 8 else f"\n... e mais {len(mismatches) - 8} arquivo(s)."
-                show_error("Patch nao aplicado", "A pasta alvo nao corresponde a base do patch:\n" + preview + extra)
+                show_error("Patch não aplicado", "A pasta alvo não corresponde a base do patch:\n" + preview + extra)
                 return
 
             log_func("Base validada. Aplicando patch...")
@@ -344,7 +344,7 @@ def apply_patch(original_dir, patch_file, log_func, show_info, show_error):
                     raise ValueError(f"Falha na verificacao final: {relative_path}")
                 log_func(f"Verificado: {relative_path}")
 
-        show_info("Sucesso", "Patch aplicado e verificado com SHA-256!")
+        show_info("Sucesso", "Patch aplicado e verificado!")
     except Exception as e:
         show_error("Erro", f"Erro ao aplicar patch: {e}")
 
@@ -370,23 +370,23 @@ def main(page: ft.Page):
             return
         try:
             # No Android 11+, esta chamada abre a tela especial "Acesso a todos
-            # os arquivos". Ela nao aparece na lista comum de permissoes do app.
+            # os arquivos". Ela não aparece na lista comum de permissoes do app.
             permission_handler.request_permission(
                 fph.PermissionType.MANAGE_EXTERNAL_STORAGE
             )
         except Exception as e:
             show_error(
-                "Permissao de armazenamento",
-                "Nao foi possivel abrir a tela de acesso a todos os arquivos: " + str(e),
+                "Permissão de armazenamento",
+                "Não foi possível abrir a tela de acesso a todos os arquivos: " + str(e),
             )
 
     def show_help(_):
         help_text = (
-            "Instrucoes de Uso:\n\n"
-            "1. Permissoes (Android):\n"
-            "- O Android requer permissao de armazenamento.\n"
+            "Instruções de Uso:\n\n"
+            "1. Permissões (Android):\n"
+            "- O Android requer permissão de armazenamento.\n"
             "- Se o app falhar com 'Permission Denied', va em:\n"
-            "  Configuracoes > Apps > Patch Maker > Permissoes\n"
+            "  Configurações > Apps > Patch Maker > Permissões\n"
             "  e ative 'Acesso a todos os arquivos'.\n\n"
             "2. Criar Patch:\n"
             "- Selecione a pasta original e a pasta modificada.\n"
@@ -394,8 +394,10 @@ def main(page: ft.Page):
             "- Clique em 'Criar Patch' para gerar o delta.\n\n"
             "3. Aplicar Patch:\n"
             "- Selecione a pasta original e o arquivo de patch.\n"
-            "- Clique em 'Aplicar Patch' para aplicar as mudancas.\n\n"
-            "Nota: Faca backup dos seus arquivos antes de aplicar patches."
+            "- Clique em 'Aplicar Patch' para aplicar as mudanças.\n\n"
+            "Nota: Faca backup dos seus arquivos antes de aplicar patches.\n"
+            "A pasta que o patch deve ser aplicado é de responsabilidade do\n"
+            "criador do seu conteúdo e deve ser especificado por ele"
         )
         dlg = ft.AlertDialog(
             title=ft.Text("Ajuda"),
@@ -497,7 +499,7 @@ def main(page: ft.Page):
             ], alignment="spaceBetween"),
             tabs,
             ft.Divider(),
-            ft.Text("Relatorio:", size=14, weight="bold"),
+            ft.Text("Relatório:", size=14, weight="bold"),
             ft.Container(
                 content=log_list,
                 height=150,
@@ -516,7 +518,7 @@ def main(page: ft.Page):
             page.update()
             request_storage_access()
         except Exception as e:
-            print(f"Erro ao solicitar permissao avançada: {e}")
+            print(f"Erro ao solicitar permissão avançada: {e}")
 
 if __name__ == "__main__":
     ft.app(main)
