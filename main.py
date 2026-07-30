@@ -250,7 +250,7 @@ def apply_patch(original_dir, patch_file, log_func, show_info, show_error):
 
         with open(patch_file, "rb") as pf:
             if read_exact(pf, len(PATCH_MAGIC), "cabecalho") != PATCH_MAGIC:
-                raise ValueError("Patch antigo ou invalido. Crie um novo patch com esta versao do app.")
+                raise ValueError("Patch antigo ou invalido. Crie um novo patch com esta versão do app.")
 
             pf.seek(0, os.SEEK_END)
             patch_size = pf.tell()
